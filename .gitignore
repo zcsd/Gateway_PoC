@@ -1,0 +1,10 @@
+*.o
+build
+*.user
+*.autosave
+*.pyc
+__pycache__
+*.jpg
+*.png
+*.stash
+*.save

@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui network opcua
+QT       += core gui network opcua mqtt
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -24,12 +24,23 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 CONFIG += c++11
 
+# libcurl, to get token from http
+LIBS += -lcurl
+
+# RFID reader, using relative path
+INCLUDEPATH += ./lib/rfid_s8
+LIBS += -L/lib -ls8
+
 SOURCES += \
         main.cpp \
-        hmiauthorization.cpp
+        hmiauthorization.cpp \
+    mqttclient.cpp \
+    rfidtool.cpp
 
 HEADERS += \
-        hmiauthorization.h
+        hmiauthorization.h \
+    mqttclient.h \
+    rfidtool.h
 
 FORMS += \
         hmiauthorization.ui

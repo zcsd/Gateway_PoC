@@ -49,6 +49,7 @@ void RFIDTool::closeDevice()
 {
     fw_beep(icdev, 20);
     fw_exit(icdev);
+    qDebug() << "RFID reader close.";
 }
 
 bool RFIDTool::testDevice()

@@ -5,6 +5,8 @@
 #include <QObject>
 #include <QDebug>
 #include <QDateTime>
+#include <QTimer>
+#include <QThread>
 
 #include <QNetworkAccessManager>
 #include <QNetworkRequest>
@@ -17,6 +19,9 @@
 #include <QOpcUaClient>
 #include <QOpcUaNode>
 #include <QtOpcUa>
+
+#include "mqttclient.h"
+#include "rfidtool.h"
 
 namespace Ui {
 class HmiAuthorization;
@@ -46,12 +51,21 @@ private slots:
     void writeAuthResultToOpcua(int isAuth, QString displayUserName, int accessLevel);
     void finishWrittenToOpcUa();
 
-    void on_pushButtonStart_clicked();
+    void receiveRFIDDeviceInfo(QString port);
+    void receiveRFIDReadInfo(bool isValid, QString card, QString data);
 
+    void receiveMqttSubMsg(QString topic, QString msg);
+
+    void on_pushButtonStart_clicked();
     void on_pushButtonStop_clicked();
 
 private:
     Ui::HmiAuthorization *ui;
+
+    RFIDTool *rfidTool;
+    QTimer *rfidTimer;
+    QThread *rfidThread;
+    bool isRFIDStart = false;
 
     QNetworkAccessManager *httpRest;
     bool requestToLogin = false, hmiUsernameReady = false, hmiPasswordReady = false;
@@ -68,10 +82,18 @@ private:
     bool isOpcUaConnected = false;
     bool authRightWritten = false, displayUsernameWritten = false, accessLevelWritten = false;
 
+    MqttClient *mqttClient;
+    bool isMqttConnected = false;
+
     void initSetup();
     void connectToOPCUAServer();
     void diconnectToOPCUAServer();
     void getHMILoginAuth(QString username, QString password, QString service = "factory");
+    void startRFID();
+    void closeRFID();
+    void connectMqtt();
+    void disconnectMqtt();
+    void mqttPublishRFID();
 
 };
 

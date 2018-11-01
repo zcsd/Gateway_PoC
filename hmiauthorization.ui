@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>HMI Authorization Gateway</string>
+   <string>Gateway</string>
   </property>
   <widget class="QWidget" name="centralWidget">
    <widget class="QLabel" name="label">
@@ -423,7 +423,7 @@
      <string>MQTT Broker:</string>
     </property>
    </widget>
-   <widget class="QLineEdit" name="lineEditAuthoUrl_2">
+   <widget class="QLineEdit" name="lineEditMqttUrl">
     <property name="geometry">
      <rect>
       <x>600</x>
@@ -457,7 +457,7 @@
      <string>RFID Reader:</string>
     </property>
    </widget>
-   <widget class="QLabel" name="labelName_2">
+   <widget class="QLabel" name="labelRFIDPort">
     <property name="geometry">
      <rect>
       <x>600</x>
@@ -473,7 +473,7 @@
      <string/>
     </property>
     <property name="alignment">
-     <set>Qt::AlignCenter</set>
+     <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
     </property>
    </widget>
   </widget>

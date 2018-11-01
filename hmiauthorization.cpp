@@ -21,6 +21,9 @@ HmiAuthorization::~HmiAuthorization()
     delete ui;
     delete opcuaProvider;
     delete httpRest;
+    delete rfidTool;
+    delete rfidTimer;
+    delete rfidThread;
 }
 
 void HmiAuthorization::initSetup()
@@ -44,6 +47,11 @@ void HmiAuthorization::initSetup()
 
     opcuaProvider = new QOpcUaProvider(this);
     httpRest = new QNetworkAccessManager(this);
+
+    rfidTool = new RFIDTool(this);
+    connect(rfidTool, SIGNAL(sendDeviceInfo(QString)), this, SLOT(receiveRFIDDeviceInfo(QString)));
+    connect(rfidTool, SIGNAL(sendReadInfo(bool, QString, QString)), this, SLOT(receiveRFIDReadInfo(bool, QString, QString)));
+
 }
 
 void HmiAuthorization::connectToOPCUAServer()
@@ -129,6 +137,89 @@ void HmiAuthorization::getHMILoginAuth(QString username, QString password, QStri
 
 
     });
+}
+
+void HmiAuthorization::startRFID()
+{
+    if (rfidTool->initDevice())
+    {
+        isRFIDStart = true;
+        ui->listWidget->addItem("[Info]    " + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss    ")
+                                          + "Connect to RFID Scanner.");
+        rfidThread = new QThread(this);
+        rfidThread->start();
+
+        rfidTimer = new QTimer();
+        rfidTimer->setInterval(500);
+
+        connect(rfidTimer, SIGNAL(timeout()), rfidTool, SLOT(icode2()), Qt::DirectConnection);
+        connect(rfidThread, SIGNAL(finished()), rfidTimer, SLOT(stop()));
+
+        rfidTimer->start();
+        //run timer work(loop reading RFID tag) in thread
+        rfidTimer->moveToThread(rfidThread);
+    }
+}
+
+void HmiAuthorization::closeRFID()
+{
+    rfidThread->quit();
+    rfidThread->wait();
+
+    rfidTool->closeDevice();
+    isRFIDStart = false;
+    ui->listWidget->addItem("[Info]    " + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss    ")
+                            + "Disconnect to RFID Scanner.");
+}
+
+void HmiAuthorization::connectMqtt()
+{
+    mqttClient = new MqttClient(this);
+    //connect(mqttClient, SIGNAL(sendConState(int)), this, SLOT(receiveMqttConState(int)));
+    connect(mqttClient, &MqttClient::sendConState, this, [this](int state)
+    {
+        if (state == 1)
+        {
+            isMqttConnected = true;
+            mqttClient->subscribe("v1/devices/me/rpc/request/+", 0);
+            connect(mqttClient, SIGNAL(sendSubMsg(QString, QString)), this, SLOT(receiveMqttSubMsg(QString, QString)));
+            ui->listWidget->addItem("[Info]    " + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss    ")
+                                                      + "Connected to Mqtt broker.");
+        }
+        else
+        {
+            isMqttConnected = false;
+            ui->listWidget->addItem("[Info]    " + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss    ")
+                                                      + "Disconnected to Mqtt broker.");
+        }
+    });
+
+    QString mqttUsername = "tenant@thingsboard.org", mqttPassword = "tenant";
+    QString mqttDeviceID = "624facf0-cb6e-11e8-8891-05a8a3fcf36e";
+    if (mqttClient->isConnected())
+    {
+        isMqttConnected = true;
+    }
+    else
+    {
+        mqttClient->connectToBroker(ui->lineEditMqttUrl->text().split(":")[0], ui->lineEditMqttUrl->text().split(":")[1],
+                                    mqttUsername, mqttPassword, mqttDeviceID, "8080");
+        mqttClient->keepAlive(25);
+    }
+}
+
+void HmiAuthorization::disconnectMqtt()
+{
+    if (isMqttConnected)
+    {
+        mqttClient->disconnect();
+    }
+    delete mqttClient;
+}
+
+void HmiAuthorization::mqttPublishRFID()
+{
+
 }
 
 void HmiAuthorization::opcuaConnected()
@@ -367,6 +458,31 @@ void HmiAuthorization::finishWrittenToOpcUa()
     }
 }
 
+void HmiAuthorization::receiveRFIDDeviceInfo(QString port)
+{
+    ui->labelRFIDPort->setText(port);
+}
+
+void HmiAuthorization::receiveRFIDReadInfo(bool isValid, QString card, QString data)
+{
+    if (isValid)
+    {
+        ui->listWidget->addItem("[Info]    " + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss    ")
+                                          + card + ": " +  data.split(":")[2]);
+        mqttClient->publish("v1/devices/me/telemetry", "{'t': 29, 'h': 16}", 0);
+    }
+    else
+    {
+        ui->listWidget->addItem("[Info]    " + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss    ")
+                                          + card);
+    }
+}
+
+void HmiAuthorization::receiveMqttSubMsg(QString topic, QString msg)
+{
+    qDebug() << topic << msg;
+}
+
 void HmiAuthorization::on_pushButtonStart_clicked()
 {
     if (!isOpcUaConnected)
@@ -379,10 +495,21 @@ void HmiAuthorization::on_pushButtonStart_clicked()
         ui->labelAccessLevel->clear();
         connectToOPCUAServer();
     }
+
+    if (!isMqttConnected)
+    {
+        connectMqtt();
+    }
+
+    startRFID();
 }
 
 void HmiAuthorization::on_pushButtonStop_clicked()
 {
     if (isOpcUaConnected)
         diconnectToOPCUAServer();
+    if (isMqttConnected)
+        disconnectMqtt();
+    closeRFID();
+    ui->labelRFIDPort->clear();
 }

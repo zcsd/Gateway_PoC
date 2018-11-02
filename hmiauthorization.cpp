@@ -51,7 +51,6 @@ void HmiAuthorization::initSetup()
     rfidTool = new RFIDTool(this);
     connect(rfidTool, SIGNAL(sendDeviceInfo(QString)), this, SLOT(receiveRFIDDeviceInfo(QString)));
     connect(rfidTool, SIGNAL(sendReadInfo(bool, QString, QString)), this, SLOT(receiveRFIDReadInfo(bool, QString, QString)));
-
 }
 
 void HmiAuthorization::connectToOPCUAServer()
@@ -181,6 +180,7 @@ void HmiAuthorization::connectMqtt()
         if (state == 1)
         {
             isMqttConnected = true;
+            // get job list information w.r.t rfid card
             mqttClient->subscribe("v1/devices/me/rpc/request/+", 0);
             connect(mqttClient, SIGNAL(sendSubMsg(QString, QString)), this, SLOT(receiveMqttSubMsg(QString, QString)));
             ui->listWidget->addItem("[Info]    " + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss    ")
@@ -215,11 +215,6 @@ void HmiAuthorization::disconnectMqtt()
         mqttClient->disconnect();
     }
     delete mqttClient;
-}
-
-void HmiAuthorization::mqttPublishRFID()
-{
-
 }
 
 void HmiAuthorization::opcuaConnected()
@@ -282,6 +277,37 @@ void HmiAuthorization::opcuaConnected()
             accessLevelWritten = false;
         }
     });
+
+    jobIDNodeW = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.job_ID"); //string
+    jobNameNodeW = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.job_ProcessName"); //string
+    materialCodeNodeW = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.job_MaterialCode"); // string
+    jobRecipeNameNodeW = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.job_RecipeName"); // string
+    jobPlanQtyNodeW = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.job_PlanQty");  // int16
+    jobPlanStartTimeNodeW = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.job_PlanStartTime"); //string
+    jobPlanEndTimeNodeW = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.job_PlanEndTime");  // string
+
+    powerStatusNodeR = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.power_status"); // uint16
+    powerStatusNodeR->enableMonitoring(QOpcUa::NodeAttribute::Value, QOpcUaMonitoringParameters(100));
+    connect(powerStatusNodeR, &QOpcUaNode::attributeUpdated, this, [this](QOpcUa::NodeAttribute attr, const QVariant &value)
+    {
+        Q_UNUSED(attr);
+        qDebug() << "Read powerStatus node:" << value.toInt();
+        ui->labelPowerStatus->setNum(value.toInt());
+        ui->listWidget->addItem("[Info]    " + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss    ")
+                                          + "Power Status in OPCUA server updated.");
+    });
+
+    visionStatusNodeR = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.vision.VISION_STATUS"); // uint16
+    visionStatusNodeR->enableMonitoring(QOpcUa::NodeAttribute::Value, QOpcUaMonitoringParameters(100));
+    connect(visionStatusNodeR, &QOpcUaNode::attributeUpdated, this, [this](QOpcUa::NodeAttribute attr, const QVariant &value)
+    {
+        Q_UNUSED(attr);
+        qDebug() << "Read visionStatus node:" << value.toInt();
+        ui->labelVisionStatus->setNum(value.toInt());
+        ui->listWidget->addItem("[Info]    " + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss    ")
+                                          + "Vision Status in OPCUA server updated.");
+    });
+
 
     usernameNodeR = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.username"); // string
     connect(usernameNodeR, &QOpcUaNode::attributeUpdated, this, [this](QOpcUa::NodeAttribute attr, const QVariant &value)
@@ -469,7 +495,10 @@ void HmiAuthorization::receiveRFIDReadInfo(bool isValid, QString card, QString d
     {
         ui->listWidget->addItem("[Info]    " + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss    ")
                                           + card + ": " +  data.split(":")[2]);
-        mqttClient->publish("v1/devices/me/telemetry", "{'t': 29, 'h': 16}", 0);
+        ui->labelRFIDRead->setText(card);
+        // it should publish card infor, but we use hardcode for testing.
+        QString toSent = QString("{'t': 30, 'tagID': %1}").arg(card);
+        mqttClient->publish("v1/devices/me/telemetry", toSent, 0);
     }
     else
     {
@@ -480,7 +509,40 @@ void HmiAuthorization::receiveRFIDReadInfo(bool isValid, QString card, QString d
 
 void HmiAuthorization::receiveMqttSubMsg(QString topic, QString msg)
 {
-    qDebug() << topic << msg;
+    // qDebug() << topic << msg;
+    // "v1/devices/me/rpc/request/+"
+    // {"method":"alarmTrigger","params":{"JobID":12345,"JobName":"Win"}}
+    ui->listWidget->addItem("[Info]    " + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss    ")
+                                      + "Msg from mqtt:" + msg);
+
+    if (topic.contains("v1/devices/me/rpc/request", Qt::CaseInsensitive))
+    {
+        const QJsonDocument doc = QJsonDocument::fromJson(msg.toUtf8());
+        const QJsonObject obj = doc.object();
+
+        //QString method = obj.value(QLatin1String("method")).toString();
+
+        int jobID = obj.value(QLatin1String("params")).toObject().value(QLatin1String("JobID")).toInt();
+        QString jobName = obj.value(QLatin1String("params")).toObject().value(QLatin1String("JobName")).toString();
+        ui->labelJobID->setNum(jobID);
+        ui->labelJobProcess->setText(jobName);
+        qDebug() << jobID << jobName;
+
+        jobIDNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, QString::number(jobID), QOpcUa::String);
+        jobNameNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, jobName, QOpcUa::String);
+        materialCodeNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, "test_mc", QOpcUa::String);
+        jobRecipeNameNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, "test_rn", QOpcUa::String);
+        jobPlanQtyNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, 5, QOpcUa::Int16);
+        jobPlanStartTimeNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, "2018-11-02 15:00", QOpcUa::String);
+        jobPlanEndTimeNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, "2018-11-02 18:30", QOpcUa::String);
+        ui->listWidget->addItem("[Info]    " + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss    ")
+                                          + "Write job information to OPCUA server");
+    }
+    else
+    {
+
+    }
+
 }
 
 void HmiAuthorization::on_pushButtonStart_clicked()
@@ -493,14 +555,18 @@ void HmiAuthorization::on_pushButtonStart_clicked()
         ui->labelApprove->clear();
         ui->labelName->clear();
         ui->labelAccessLevel->clear();
+        ui->labelPowerStatus->clear();
+        ui->labelVisionStatus->clear();
         connectToOPCUAServer();
     }
 
     if (!isMqttConnected)
     {
+        ui->labelJobID->clear();
+        ui->labelJobProcess->clear();
         connectMqtt();
     }
-
+    ui->labelRFIDRead->clear();
     startRFID();
 }
 
@@ -512,4 +578,15 @@ void HmiAuthorization::on_pushButtonStop_clicked()
         disconnectMqtt();
     closeRFID();
     ui->labelRFIDPort->clear();
+    ui->labelRFIDRead->clear();
+    ui->labelID->clear();
+    ui->labelPassword->clear();
+    ui->labelTimeLogin->clear();
+    ui->labelApprove->clear();
+    ui->labelName->clear();
+    ui->labelAccessLevel->clear();
+    ui->labelPowerStatus->clear();
+    ui->labelVisionStatus->clear();
+    ui->labelJobID->clear();
+    ui->labelJobProcess->clear();
 }

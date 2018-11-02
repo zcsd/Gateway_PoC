@@ -79,6 +79,9 @@ private:
     QOpcUaNode *authRightNodeW;
     QOpcUaNode *displayUsernameNodeW;
     QOpcUaNode *accessLevelNodeW;
+    QOpcUaNode *jobIDNodeW, *jobNameNodeW, *materialCodeNodeW, *jobRecipeNameNodeW, *jobPlanQtyNodeW, *jobPlanStartTimeNodeW, *jobPlanEndTimeNodeW;
+    QOpcUaNode *powerStatusNodeR, *visionStatusNodeR;
+
     bool isOpcUaConnected = false;
     bool authRightWritten = false, displayUsernameWritten = false, accessLevelWritten = false;
 
@@ -93,7 +96,6 @@ private:
     void closeRFID();
     void connectMqtt();
     void disconnectMqtt();
-    void mqttPublishRFID();
 
 };
 

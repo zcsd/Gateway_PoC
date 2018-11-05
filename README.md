@@ -1,4 +1,4 @@
-# **HMI Authoriazation Gateway**
+# **Gateway**
 
 using OPCUA and http REST api
 
@@ -6,6 +6,6 @@ using OPCUA and http REST api
 
 **Requirements**
 - Ubuntu(16.04+)
-- QT Library 5.11.2 +
+- Qt 5.12 (LTS)
 
 *Oct 25 2018*

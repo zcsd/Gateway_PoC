@@ -45,6 +45,8 @@ void Gateway::initSetup()
     connect(this, SIGNAL(sendAuthResult(int, QString, int)), this, SLOT(writeAuthResultToOpcua(int, QString, int)));
     connect(this, SIGNAL(authResultWrittenToOpcUa()), this, SLOT(finishWrittenToOpcUa()));
 
+    connect(this, SIGNAL(readyToSendJobRequest()), this, SLOT(prepareToSendJobRequest()));
+
     opcuaProvider = new QOpcUaProvider(this);
     httpRest = new QNetworkAccessManager(this);
 
@@ -278,14 +280,23 @@ void Gateway::opcuaConnected()
         }
     });
 
-    jobIDNodeW = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.job_ID"); //string
-    jobNameNodeW = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.job_ProcessName"); //string
-    materialCodeNodeW = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.job_MaterialCode"); // string
-    jobRecipeNameNodeW = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.job_RecipeName"); // string
-    jobPlanQtyNodeW = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.job_PlanQty");  // int16
-    jobPlanStartTimeNodeW = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.job_PlanStartTime"); //string
-    jobPlanEndTimeNodeW = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.job_PlanEndTime");  // string
+    jobIDNodeW = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.job.job_ID"); //string
+    jobNameNodeW = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.job.job_ProcessName"); //string
+    materialCodeNodeW = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.job.job_MaterialCode"); // string
+    jobRecipeNameNodeW = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.job.job_RecipeName"); // string
+    jobPlanQtyNodeW = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.job.job_PlanQty");  // int32
+    jobPlanStartTimeNodeW = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.job.job_PlanStartTime"); //string
+    jobPlanEndTimeNodeW = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.job.job_PlanEndTime");  // string
 
+    jobApproveNodeW = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.job_approve");  // int16
+    visionResultR = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.vision.RESULT"); // uint16
+    goodPartsCounterR = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.counter.good_parts"); // int32
+    rejectSizePartsCounterR = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.counter.rejectSize_parts"); //int32
+    rejectColorPartsCounterR = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.counter.rejectColor_parts"); // int32
+    totalPartsCounterR = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.counter.total_parts"); //int32
+    conveyorSpeedNodeW = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.parameters.conveyor_Speed"); //int16
+
+    ///////////////////////////////////////////////Job Request, Vision Status, Power Status////////////////////////////////////////////
     powerStatusNodeR = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.power_status"); // uint16
     powerStatusNodeR->enableMonitoring(QOpcUa::NodeAttribute::Value, QOpcUaMonitoringParameters(100));
     connect(powerStatusNodeR, &QOpcUaNode::attributeUpdated, this, [this](QOpcUa::NodeAttribute attr, const QVariant &value)
@@ -295,6 +306,15 @@ void Gateway::opcuaConnected()
         ui->labelPowerStatus->setNum(value.toInt());
         ui->listWidget->addItem("[Info]    " + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss    ")
                                           + "Power Status in OPCUA server updated.");
+        if (value.toInt() == 1)
+        {
+            isPowerReady = true;
+            emit readyToSendJobRequest();
+        }
+        else
+        {
+            isPowerReady = false;
+        }
     });
 
     visionStatusNodeR = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.vision.VISION_STATUS"); // uint16
@@ -306,8 +326,37 @@ void Gateway::opcuaConnected()
         ui->labelVisionStatus->setNum(value.toInt());
         ui->listWidget->addItem("[Info]    " + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss    ")
                                           + "Vision Status in OPCUA server updated.");
+        if (value.toInt() == 1)
+        {
+            isVisionReady = true;
+            emit readyToSendJobRequest();
+        }
+        else
+        {
+            isVisionReady = false;
+        }
     });
 
+    jobRequestNodeRW = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.job_request"); // int16
+    jobRequestNodeRW->enableMonitoring(QOpcUa::NodeAttribute::Value, QOpcUaMonitoringParameters(100));
+    connect(jobRequestNodeRW, &QOpcUaNode::attributeUpdated, this, [this](QOpcUa::NodeAttribute attr, const QVariant &value)
+    {
+        Q_UNUSED(attr);
+        qDebug() << "Read jobRequest node:" << value.toInt();
+        ui->labelJobRequest->setNum(value.toInt());
+        ui->listWidget->addItem("[Info]    " + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss    ")
+                                          + "Job Request in OPCUA server updated.");
+        if (value.toInt() == 1)
+        {
+            isJobRequest = true;
+            emit readyToSendJobRequest();
+        }
+        else
+        {
+            isJobRequest = false;
+        }
+    });
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     usernameNodeR = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.username"); // string
     connect(usernameNodeR, &QOpcUaNode::attributeUpdated, this, [this](QOpcUa::NodeAttribute attr, const QVariant &value)
@@ -496,9 +545,9 @@ void Gateway::receiveRFIDReadInfo(bool isValid, QString card, QString data)
         ui->listWidget->addItem("[Info]    " + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss    ")
                                           + card + ": " +  data.split(":")[2]);
         ui->labelRFIDRead->setText(card);
-        // it should publish card infor, but we use hardcode for testing.
-        QString toSent = QString("{'t': 30, 'tagID': %1}").arg(card);
-        mqttClient->publish("v1/devices/me/telemetry", toSent, 0);
+        cardID = card;
+        isMaterialReady = true;
+        emit readyToSendJobRequest();
     }
     else
     {
@@ -532,7 +581,7 @@ void Gateway::receiveMqttSubMsg(QString topic, QString msg)
         jobNameNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, jobName, QOpcUa::String);
         materialCodeNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, "test_mc", QOpcUa::String);
         jobRecipeNameNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, "test_rn", QOpcUa::String);
-        jobPlanQtyNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, 5, QOpcUa::Int16);
+        jobPlanQtyNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, 5, QOpcUa::Int32);
         jobPlanStartTimeNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, "2018-11-02 15:00", QOpcUa::String);
         jobPlanEndTimeNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, "2018-11-02 18:30", QOpcUa::String);
         ui->listWidget->addItem("[Info]    " + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss    ")
@@ -543,6 +592,19 @@ void Gateway::receiveMqttSubMsg(QString topic, QString msg)
 
     }
 
+}
+
+void Gateway::prepareToSendJobRequest()
+{
+    if (isJobRequest && isVisionReady && isPowerReady && isMaterialReady)
+    {
+        // it should publish card infor, but we use hardcode for testing.
+        QString toSent = QString("{'t': 30, 'tagID': %1}").arg(cardID);
+        mqttClient->publish("v1/devices/me/telemetry", toSent, 0);
+        isMaterialReady = false;
+        ui->listWidget->addItem("[Info]    " + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss    ")
+                                          + "Check status ok, sent job request to Thingsboard.");
+    }
 }
 
 void Gateway::on_pushButtonStart_clicked()
@@ -577,6 +639,10 @@ void Gateway::on_pushButtonStop_clicked()
     if (isMqttConnected)
         disconnectMqtt();
     closeRFID();
+    isJobRequest = false;
+    isPowerReady = false;
+    isVisionReady = false;
+    isMaterialReady = false;
     ui->labelRFIDPort->clear();
     ui->labelRFIDRead->clear();
     ui->labelID->clear();

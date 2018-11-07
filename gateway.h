@@ -39,6 +39,7 @@ signals:
     void sendAuthResult(int, QString, int);
     void readyToGetHMIAuth();
     void authResultWrittenToOpcUa();
+    void readyToSendJobRequest();
 
 private slots:
     void opcuaConnected();
@@ -55,6 +56,7 @@ private slots:
     void receiveRFIDReadInfo(bool isValid, QString card, QString data);
 
     void receiveMqttSubMsg(QString topic, QString msg);
+    void prepareToSendJobRequest();
 
     void on_pushButtonStart_clicked();
     void on_pushButtonStop_clicked();
@@ -81,12 +83,18 @@ private:
     QOpcUaNode *accessLevelNodeW;
     QOpcUaNode *jobIDNodeW, *jobNameNodeW, *materialCodeNodeW, *jobRecipeNameNodeW, *jobPlanQtyNodeW, *jobPlanStartTimeNodeW, *jobPlanEndTimeNodeW;
     QOpcUaNode *powerStatusNodeR, *visionStatusNodeR;
+    QOpcUaNode *jobRequestNodeRW, *jobApproveNodeW;
+    QOpcUaNode *visionResultR, *goodPartsCounterR, *rejectSizePartsCounterR, *rejectColorPartsCounterR, *totalPartsCounterR;
+    QOpcUaNode *conveyorSpeedNodeW;
 
     bool isOpcUaConnected = false;
     bool authRightWritten = false, displayUsernameWritten = false, accessLevelWritten = false;
 
     MqttClient *mqttClient;
     bool isMqttConnected = false;
+
+    QString cardID;
+    bool isJobRequest = false, isVisionReady = false, isPowerReady = false, isMaterialReady = false;
 
     void initSetup();
     void connectToOPCUAServer();

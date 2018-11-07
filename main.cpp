@@ -1,10 +1,10 @@
-#include "hmiauthorization.h"
+#include "gateway.h"
 #include <QApplication>
 
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
-    HmiAuthorization w;
+    Gateway w;
     w.show();
 
     return a.exec();

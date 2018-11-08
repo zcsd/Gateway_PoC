@@ -40,6 +40,7 @@ signals:
     void readyToGetHMIAuth();
     void authResultWrittenToOpcUa();
     void readyToSendJobRequest();
+    void readyToStartGateway();
 
 private slots:
     void opcuaConnected();
@@ -57,12 +58,14 @@ private slots:
 
     void receiveMqttSubMsg(QString topic, QString msg);
     void prepareToSendJobRequest();
+    void prepareToStartGateway();
 
     void on_pushButtonStart_clicked();
     void on_pushButtonStop_clicked();
 
 private:
     Ui::Gateway *ui;
+    bool isGatewayReady = false, isJobStart = false;
 
     RFIDTool *rfidTool;
     QTimer *rfidTimer;
@@ -76,16 +79,14 @@ private:
     QOpcUaProvider *opcuaProvider;
     QOpcUaClient *opcuaClient;
     QOpcUaNode *hmiLoginRequestNodeRW;
-    QOpcUaNode *usernameNodeR;
-    QOpcUaNode *passwordNodeR;
-    QOpcUaNode *authRightNodeW;
-    QOpcUaNode *displayUsernameNodeW;
-    QOpcUaNode *accessLevelNodeW;
+    QOpcUaNode *usernameNodeR, *passwordNodeR;
+    QOpcUaNode *authRightNodeW, *accessLevelNodeW, *displayUsernameNodeW;
     QOpcUaNode *jobIDNodeW, *jobNameNodeW, *materialCodeNodeW, *jobRecipeNameNodeW, *jobPlanQtyNodeW, *jobPlanStartTimeNodeW, *jobPlanEndTimeNodeW;
     QOpcUaNode *powerStatusNodeR, *visionStatusNodeR;
     QOpcUaNode *jobRequestNodeRW, *jobApproveNodeW;
     QOpcUaNode *visionResultR, *goodPartsCounterR, *rejectSizePartsCounterR, *rejectColorPartsCounterR, *totalPartsCounterR;
     QOpcUaNode *conveyorSpeedNodeW;
+    QOpcUaNode *jobCompletedNodeR, *jobBusyStatusNodeR;
 
     bool isOpcUaConnected = false;
     bool authRightWritten = false, displayUsernameWritten = false, accessLevelWritten = false;
@@ -93,7 +94,7 @@ private:
     MqttClient *mqttClient;
     bool isMqttConnected = false;
 
-    QString cardID;
+    QString cardID, sJobID;
     bool isJobRequest = false, isVisionReady = false, isPowerReady = false, isMaterialReady = false;
 
     void initSetup();
@@ -104,7 +105,6 @@ private:
     void closeRFID();
     void connectMqtt();
     void disconnectMqtt();
-
 };
 
 #endif // GATEWAY_H

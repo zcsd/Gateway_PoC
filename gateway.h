@@ -65,7 +65,7 @@ private slots:
 
 private:
     Ui::Gateway *ui;
-    bool isGatewayReady = false, isJobStart = false;
+    bool isGatewayReady = false, isJobStart = false, isJobCompleted = true;
 
     RFIDTool *rfidTool;
     QTimer *rfidTimer;

@@ -724,8 +724,8 @@ void Gateway::receiveMqttSubMsg(QString topic, QString msg)
         ui->labelJobMaterial->setText(materialCode);
         ui->labelJobRecipe->setText(jobRecipeName);
         ui->labelJobQuantity->setText(jobPlanQty);
-        ui->labelJobStartTime->setText(jobPlanStartTime);
-        ui->labelJobEndTime->setText(jobPlanEndTime);
+        ui->labelJobStartTime->setText(QDateTime::fromMSecsSinceEpoch(jobPlanStartTime.toLongLong()).toString("yyyy-MM-dd hh:mm:ss"));
+        ui->labelJobEndTime->setText(QDateTime::fromMSecsSinceEpoch(jobPlanEndTime.toLongLong()).toString("yyyy-MM-dd hh:mm:ss"));
         ui->labelJobConSpeed->setText(conveyorSpeed);
 
         jobIDNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, jobID, QOpcUa::String);

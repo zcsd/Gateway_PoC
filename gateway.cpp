@@ -719,6 +719,9 @@ void Gateway::receiveRFIDReadInfo(bool isValid, QString card, QString data)
 {
     if (isValid)
     {
+        QString toSent = QString("{'MaterialStatus': 1, 'TagID': %1}").arg(card);
+        mqttClient->publish("v1/devices/me/telemetry", toSent, 0);
+
         ui->listWidget->addItem("[Info]    " + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss    ")
                                           + card + ": " +  data.split(":")[2]);
         ui->labelRFIDRead->setText(card);
@@ -772,6 +775,8 @@ void Gateway::receiveMqttSubMsg(QString topic, QString msg)
         conveyorSpeedNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, conveyorSpeed.toInt(), QOpcUa::Int16);
 
         jobApproveNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, 8, QOpcUa::Int16); // Approve job request (8),reject(7)
+
+        ui->labelRFIDRead->clear();
 
         ui->listWidget->addItem("[Info]    " + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss    ")
                                           + "Write job information to OPCUA server");

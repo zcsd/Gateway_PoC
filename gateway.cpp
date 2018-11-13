@@ -347,6 +347,8 @@ void Gateway::opcuaConnected()
         if (attr == QOpcUa::NodeAttribute::Value && status == QOpcUa::UaStatusCode::Good)
         {
             qDebug() << "Write(Change) auth_request(reset to 0) to opcua server successfully.";
+            QString toSent = QString("{'OperatorLogin': 1}");
+            mqttClient->publish("v1/devices/me/telemetry", toSent, 0);
 
             usernameNodeR->disableMonitoring(QOpcUa::NodeAttribute::Value);
             passwordNodeR->disableMonitoring(QOpcUa::NodeAttribute::Value);
@@ -379,6 +381,18 @@ void Gateway::opcuaConnected()
     jobPlanEndTimeNodeW = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.job.job_PlanEndTime");  // string
     conveyorSpeedNodeW = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.parameters.conveyor_Speed"); //int16
     jobApproveNodeW = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.job_approve");  // int16
+
+    materialReadyNodeW = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.materialReady"); // uint16
+
+    machineStepNodeR = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.machineStep"); // uint 16
+    machineStepNodeR->enableMonitoring(QOpcUa::NodeAttribute::Value, QOpcUaMonitoringParameters(100));
+    connect(machineStepNodeR, &QOpcUaNode::attributeUpdated, this, [this](QOpcUa::NodeAttribute attr, const QVariant &value)
+    {
+        Q_UNUSED(attr);
+        qDebug() << "Read machineStep status node:" << value.toInt();
+        QString toSent = QString("{'MachineStep': %1").arg(QString::number(value.toInt()));
+        mqttClient->publish("v1/devices/me/telemetry", toSent, 0);
+    });
 
     jobCompletedNodeR = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.job_completed"); // int16
     jobCompletedNodeR->enableMonitoring(QOpcUa::NodeAttribute::Value, QOpcUaMonitoringParameters(100));
@@ -433,7 +447,6 @@ void Gateway::opcuaConnected()
         qDebug() << "Read machineReady node:" << value.toInt();
         ui->listWidget->addItem("[Info]    " + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss    ")
                                           + "Machine Ready(for vision result writing) in OPCUA server updated: " + QString::number(value.toInt()));
-
     });
 
     resultReadNodeRW = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.vision.RESULT_READ"); // uint16
@@ -551,8 +564,10 @@ void Gateway::opcuaConnected()
                                           + "Power Status in OPCUA server updated: " + QString::number(value.toInt()));
         if (value.toInt() == 1)
         {
+            QString toSent = QString("{'PowerOn': 1}");
+            mqttClient->publish("v1/devices/me/telemetry", toSent, 0);
             isPowerReady = true;
-            emit readyToSendJobRequest();
+            //emit readyToSendJobRequest();
         }
         else
         {
@@ -571,8 +586,10 @@ void Gateway::opcuaConnected()
                                           + "Vision Status in OPCUA server updated: " + QString::number(value.toInt()));
         if (value.toInt() == 1)
         {
+            QString toSent = QString("{'VisionReady': 1}");
+            mqttClient->publish("v1/devices/me/telemetry", toSent, 0);
             isVisionReady = true;
-            emit readyToSendJobRequest();
+            //emit readyToSendJobRequest();
         }
         else
         {
@@ -591,8 +608,10 @@ void Gateway::opcuaConnected()
                                           + "Job Request in OPCUA server updated: " + QString::number(value.toInt()));
         if (value.toInt() == 1)
         {
+            QString toSent = QString("{'JobRequest': 1}");
+            mqttClient->publish("v1/devices/me/telemetry", toSent, 0);
             isJobRequest = true;
-            emit readyToSendJobRequest();
+            //emit readyToSendJobRequest();
         }
         else
         {
@@ -721,15 +740,16 @@ void Gateway::receiveRFIDReadInfo(bool isValid, QString card, QString data)
 {
     if (isValid)
     {
-        QString toSent = QString("{'MaterialStatus': 1, 'TagID': %1}").arg(card);
+        isMaterialReady = true;
+        QString toSent = QString("{'MaterialReady': 1, 'TagID': %1}").arg(card);
         mqttClient->publish("v1/devices/me/telemetry", toSent, 0);
+        materialReadyNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, 1, QOpcUa::UInt16);
 
         ui->listWidget->addItem("[Info]    " + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss    ")
                                           + card + ": " +  data.split(":")[2]);
         ui->labelRFIDRead->setText(card);
         cardID = card;
-        isMaterialReady = true;
-        emit readyToSendJobRequest();
+        //emit readyToSendJobRequest();
     }
     else
     {

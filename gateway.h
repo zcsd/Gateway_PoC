@@ -85,12 +85,12 @@ private:
     QOpcUaNode *usernameNodeR, *passwordNodeR;
     QOpcUaNode *authRightNodeW, *accessLevelNodeW, *displayUsernameNodeW;
     QOpcUaNode *jobIDNodeW, *jobNameNodeW, *materialCodeNodeW, *jobRecipeNameNodeW, *jobPlanQtyNodeW, *jobPlanStartTimeNodeW, *jobPlanEndTimeNodeW;
-    QOpcUaNode *powerStatusNodeR, *visionStatusNodeR;
+    QOpcUaNode *powerStatusNodeR, *visionStatusNodeR, *materialReadyNodeW;
     QOpcUaNode *jobRequestNodeRW, *jobApproveNodeW;
     QOpcUaNode *visionResultR, *goodPartsCounterR, *rejectSizePartsCounterR, *rejectColorPartsCounterR, *totalPartsCounterR;
     QOpcUaNode *conveyorSpeedNodeW;
     QOpcUaNode *jobCompletedNodeR, *jobBusyStatusNodeR;
-    QOpcUaNode *machineReadyNodeR, *resultReadNodeRW;
+    QOpcUaNode *machineReadyNodeR, *resultReadNodeRW, *machineStepNodeR;
 
     bool isOpcUaConnected = false;
     bool authRightWritten = false, displayUsernameWritten = false, accessLevelWritten = false;

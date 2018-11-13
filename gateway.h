@@ -41,6 +41,7 @@ signals:
     void authResultWrittenToOpcUa();
     void readyToSendJobRequest();
     void readyToStartGateway();
+    void readyToResetVisionResult();
 
 private slots:
     void opcuaConnected();
@@ -59,6 +60,7 @@ private slots:
     void receiveMqttSubMsg(QString topic, QString msg);
     void prepareToSendJobRequest();
     void prepareToStartGateway();
+    void prepareToResetVisionResult();
 
     void on_pushButtonStart_clicked();
     void on_pushButtonStop_clicked();
@@ -66,6 +68,7 @@ private slots:
 private:
     Ui::Gateway *ui;
     bool isGatewayReady = false, isJobStart = false, isJobCompleted = true;
+    bool isResultRead = false, isResultPublished = false;
 
     RFIDTool *rfidTool;
     QTimer *rfidTimer;
@@ -87,6 +90,7 @@ private:
     QOpcUaNode *visionResultR, *goodPartsCounterR, *rejectSizePartsCounterR, *rejectColorPartsCounterR, *totalPartsCounterR;
     QOpcUaNode *conveyorSpeedNodeW;
     QOpcUaNode *jobCompletedNodeR, *jobBusyStatusNodeR;
+    QOpcUaNode *machineReadyNodeR, *resultReadNodeRW;
 
     bool isOpcUaConnected = false;
     bool authRightWritten = false, displayUsernameWritten = false, accessLevelWritten = false;

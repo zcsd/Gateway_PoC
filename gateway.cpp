@@ -53,6 +53,7 @@ void Gateway::initSetup()
     connect(this, SIGNAL(readyToStartGateway()), this, SLOT(prepareToStartGateway()));
     connect(this, SIGNAL(readyToGetHMIAuth()), this, SLOT(prepareToGetHMIAuth()));
     connect(this, SIGNAL(readyToSendJobRequest()), this, SLOT(prepareToSendJobRequest()));
+    connect(this, SIGNAL(readyToResetVisionResult()), this, SLOT(prepareToResetVisionResult()));
     connect(this, SIGNAL(sendAuthResult(int, QString, int)), this, SLOT(writeAuthResultToOpcua(int, QString, int)));
     connect(this, SIGNAL(authResultWrittenToOpcUa()), this, SLOT(finishWrittenToOpcUa()));
 
@@ -422,6 +423,37 @@ void Gateway::opcuaConnected()
         }
     });
 
+    machineReadyNodeR = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.vision.MACHINE_READY"); // uint16
+    machineReadyNodeR->enableMonitoring(QOpcUa::NodeAttribute::Value, QOpcUaMonitoringParameters(100));
+    connect(machineReadyNodeR, &QOpcUaNode::attributeUpdated, this, [this](QOpcUa::NodeAttribute attr, const QVariant &value)
+    {
+        Q_UNUSED(attr);
+        qDebug() << "Read machineReady node:" << value.toInt();
+        ui->listWidget->addItem("[Info]    " + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss    ")
+                                          + "Machine Ready(for vision result writing) in OPCUA server updated: " + QString::number(value.toInt()));
+
+    });
+
+    resultReadNodeRW = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.vision.RESULT_READ"); // uint16
+    resultReadNodeRW->enableMonitoring(QOpcUa::NodeAttribute::Value, QOpcUaMonitoringParameters(100));
+    connect(resultReadNodeRW, &QOpcUaNode::attributeUpdated, this, [this](QOpcUa::NodeAttribute attr, const QVariant &value)
+    {
+        Q_UNUSED(attr);
+        qDebug() << "Read resultRead node:" << value.toInt();
+        ui->listWidget->addItem("[Info]    " + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss    ")
+                                          + "Result Read Status in OPCUA server updated: " + QString::number(value.toInt()));
+        if (value.toInt() == 1)
+        {
+            isResultRead = true;
+            emit readyToResetVisionResult();
+        }
+        else
+        {
+            isResultRead = false;
+        }
+
+    });
+
     visionResultR = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.vision.RESULT"); // uint16
     visionResultR->enableMonitoring(QOpcUa::NodeAttribute::Value, QOpcUaMonitoringParameters(100));
     connect(visionResultR, &QOpcUaNode::attributeUpdated, this, [this](QOpcUa::NodeAttribute attr, const QVariant &value)
@@ -432,10 +464,12 @@ void Gateway::opcuaConnected()
                                           + "Vision Result in OPCUA server updated: " + QString::number(value.toInt()));
         ui->labelJobVisionResult->setNum(value.toInt());
         ui->labelJobTime->setText(QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss"));
-        if (isJobStart)
+        if ( isJobStart && (value.toInt() != 0) )
         {
             QString toSent = QString("{'JobID': %1, 'VisionResult': %2}").arg(sJobID, QString::number(value.toInt()));
             mqttClient->publish("v1/devices/me/telemetry", toSent, 0);
+            isResultPublished = true;
+            emit readyToResetVisionResult();
         }
     });
 
@@ -776,6 +810,16 @@ void Gateway::prepareToStartGateway()
         ui->pushButtonStop->setDisabled(true);
         ui->pushButtonStart->setEnabled(true);
         ui->pushButtonStart->setStyleSheet("background-color: rgb(225, 225, 225);"); // gray
+    }
+}
+
+void Gateway::prepareToResetVisionResult()
+{
+    if (isResultRead && isResultPublished)
+    {
+        resultReadNodeRW->writeAttribute(QOpcUa::NodeAttribute::Value, 0, QOpcUa::UInt16);
+        visionResultR->writeAttribute(QOpcUa::NodeAttribute::Value, 0, QOpcUa::UInt16);
+        isResultPublished = false;
     }
 }
 

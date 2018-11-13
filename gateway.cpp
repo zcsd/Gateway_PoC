@@ -389,17 +389,19 @@ void Gateway::opcuaConnected()
         ui->listWidget->addItem("[Info]    " + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss    ")
                                           + "Job Completed Status in OPCUA server updated: " + QString::number(value.toInt()));
         ui->labelJobCompletedStatus->setNum(value.toInt());
-        /*
+
         if (value.toInt() == 1)
         {
-            isJobStart = false;
-            isJobCompleted = true;
+            ui->labelJobID->clear();
+            ui->labelJobProcess->clear();
+            ui->labelJobMaterial->clear();
+            ui->labelJobRecipe->clear();
+            ui->labelJobQuantity->clear();
+            ui->labelJobStartTime->clear();
+            ui->labelJobEndTime->clear();
+            ui->labelJobConSpeed->clear();
         }
-        else if (value.toInt() == 0)
-        {
-            isJobStart = true;
-            isJobCompleted = false;
-        }*/
+
     });
 
     jobBusyStatusNodeR = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.job_busy"); // int16

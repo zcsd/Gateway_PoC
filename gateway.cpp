@@ -392,7 +392,7 @@ void Gateway::opcuaConnected()
         qDebug() << "Read machineStep status node:" << value.toInt();
         if (isMqttConnected)
         {
-            QString toSent = QString("{'MachineStep': %1").arg(QString::number(value.toInt()));
+            QString toSent = QString("{'MachineStep': %1}").arg(QString::number(value.toInt()));
             mqttClient->publish("v1/devices/me/telemetry", toSent, 0);
         }
     });

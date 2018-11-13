@@ -390,8 +390,11 @@ void Gateway::opcuaConnected()
     {
         Q_UNUSED(attr);
         qDebug() << "Read machineStep status node:" << value.toInt();
-        QString toSent = QString("{'MachineStep': %1").arg(QString::number(value.toInt()));
-        mqttClient->publish("v1/devices/me/telemetry", toSent, 0);
+        if (isMqttConnected)
+        {
+            QString toSent = QString("{'MachineStep': %1").arg(QString::number(value.toInt()));
+            mqttClient->publish("v1/devices/me/telemetry", toSent, 0);
+        }
     });
 
     jobCompletedNodeR = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.job_completed"); // int16
@@ -564,8 +567,11 @@ void Gateway::opcuaConnected()
                                           + "Power Status in OPCUA server updated: " + QString::number(value.toInt()));
         if (value.toInt() == 1)
         {
-            QString toSent = QString("{'PowerOn': 1}");
-            mqttClient->publish("v1/devices/me/telemetry", toSent, 0);
+            if (isMqttConnected)
+            {
+                QString toSent = QString("{'PowerOn': 1}");
+                mqttClient->publish("v1/devices/me/telemetry", toSent, 0);
+            }
             isPowerReady = true;
             //emit readyToSendJobRequest();
         }
@@ -586,8 +592,11 @@ void Gateway::opcuaConnected()
                                           + "Vision Status in OPCUA server updated: " + QString::number(value.toInt()));
         if (value.toInt() == 1)
         {
-            QString toSent = QString("{'VisionReady': 1}");
-            mqttClient->publish("v1/devices/me/telemetry", toSent, 0);
+            if (isMqttConnected)
+            {
+                QString toSent = QString("{'VisionReady': 1}");
+                mqttClient->publish("v1/devices/me/telemetry", toSent, 0);
+            }
             isVisionReady = true;
             //emit readyToSendJobRequest();
         }
@@ -608,8 +617,11 @@ void Gateway::opcuaConnected()
                                           + "Job Request in OPCUA server updated: " + QString::number(value.toInt()));
         if (value.toInt() == 1)
         {
-            QString toSent = QString("{'JobRequest': 1}");
-            mqttClient->publish("v1/devices/me/telemetry", toSent, 0);
+            if (isMqttConnected)
+            {
+                QString toSent = QString("{'JobRequest': 1}");
+                mqttClient->publish("v1/devices/me/telemetry", toSent, 0);
+            }
             isJobRequest = true;
             //emit readyToSendJobRequest();
         }

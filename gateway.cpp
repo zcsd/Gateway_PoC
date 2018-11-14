@@ -137,6 +137,8 @@ void Gateway::getHMILoginAuth(QString username, QString password, QString servic
             ui->labelApprove->setNum(authCode);
             ui->labelName->setText(displayUserName);
             ui->labelAccessLevel->setText(accessLevel);
+            QString toSent = QString("{'OperatorLogin': 1, 'UserName': %1}").arg(displayUserName);
+            mqttClient->publish("v1/devices/me/telemetry", toSent, 0);
         }
         else
         {
@@ -347,8 +349,6 @@ void Gateway::opcuaConnected()
         if (attr == QOpcUa::NodeAttribute::Value && status == QOpcUa::UaStatusCode::Good)
         {
             qDebug() << "Write(Change) auth_request(reset to 0) to opcua server successfully.";
-            QString toSent = QString("{'OperatorLogin': 1}");
-            mqttClient->publish("v1/devices/me/telemetry", toSent, 0);
 
             usernameNodeR->disableMonitoring(QOpcUa::NodeAttribute::Value);
             passwordNodeR->disableMonitoring(QOpcUa::NodeAttribute::Value);
@@ -390,6 +390,7 @@ void Gateway::opcuaConnected()
     {
         Q_UNUSED(attr);
         qDebug() << "Read machineStep status node:" << value.toInt();
+        ui->labelMachineStep->setNum(value.toInt());
         if (isMqttConnected)
         {
             QString toSent = QString("{'MachineStep': %1}").arg(QString::number(value.toInt()));
@@ -646,6 +647,7 @@ void Gateway::opcuaDisconnected()
     ui->labelPowerStatus->clear();
     ui->labelVisionStatus->clear();
     ui->labelJobRequest->clear();
+    ui->labelMachineStep->clear();
     ui->labelJobBusyStatus->clear();
     ui->labelJobCompletedStatus->clear();
     ui->labelJobVisionResult->clear();
@@ -875,6 +877,7 @@ void Gateway::on_pushButtonStart_clicked()
         ui->labelPowerStatus->clear();
         ui->labelVisionStatus->clear();
         ui->labelJobRequest->clear();
+        ui->labelMachineStep->clear();
         ui->labelJobBusyStatus->clear();
         ui->labelJobCompletedStatus->clear();
         ui->labelJobVisionResult->clear();
@@ -932,6 +935,7 @@ void Gateway::on_pushButtonStop_clicked()
     ui->labelPowerStatus->clear();
     ui->labelVisionStatus->clear();
     ui->labelJobRequest->clear();
+    ui->labelMachineStep->clear();
     ui->labelJobID->clear();
     ui->labelJobProcess->clear();
     ui->labelJobMaterial->clear();

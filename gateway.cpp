@@ -137,7 +137,7 @@ void Gateway::getHMILoginAuth(QString username, QString password, QString servic
             ui->labelApprove->setNum(authCode);
             ui->labelName->setText(displayUserName);
             ui->labelAccessLevel->setText(accessLevel);
-            QString toSent = QString("{'OperatorLogin': 1, 'UserName': %1}").arg(displayUserName);
+            QString toSent = QString("{'OperatorLogin': 1, 'UserName': '%1'}").arg(displayUserName);
             mqttClient->publish("v1/devices/me/telemetry", toSent, 0);
         }
         else

@@ -393,7 +393,7 @@ void Gateway::opcuaConnected()
         ui->labelMachineStep->setNum(value.toInt());
         if (isMqttConnected)
         {
-            QString toSent = QString("{'MachineStep': %1}").arg(QString::number(value.toInt()));
+            QString toSent = QString("{'JobID': %1,'MachineStep': %2}").arg(sJobID, QString::number(value.toInt()));
             mqttClient->publish("v1/devices/me/telemetry", toSent, 0);
         }
     });
@@ -410,6 +410,7 @@ void Gateway::opcuaConnected()
 
         if (value.toInt() == 1)
         {
+            sJobID = "NA";
             ui->labelJobID->clear();
             ui->labelJobProcess->clear();
             ui->labelJobMaterial->clear();
@@ -755,7 +756,7 @@ void Gateway::receiveRFIDReadInfo(bool isValid, QString card, QString data)
     if (isValid)
     {
         isMaterialReady = true;
-        QString toSent = QString("{'MaterialReady': 1, 'TagID': %1}").arg(card);
+        QString toSent = QString("{'JobID': %1, 'MaterialReady': 1, 'TagID': %2}").arg(sJobID ,card);
         mqttClient->publish("v1/devices/me/telemetry", toSent, 0);
         materialReadyNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, 1, QOpcUa::UInt16);
 

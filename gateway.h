@@ -98,7 +98,7 @@ private:
     MqttClient *mqttClient;
     bool isMqttConnected = false;
 
-    QString cardID, sJobID;
+    QString cardID, sJobID = "NA";
     bool isJobRequest = false, isVisionReady = false, isPowerReady = false, isMaterialReady = false;
 
     void initSetup();

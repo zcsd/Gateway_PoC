@@ -77,12 +77,12 @@ private:
 
     QNetworkAccessManager *httpRest;
     bool requestToLogin = false, hmiUsernameReady = false, hmiPasswordReady = false;
-    QString hmiUsername, hmiPassword;
+    QString hmiUsername, hmiPassword, displayUserName;
 
     QOpcUaProvider *opcuaProvider;
     QOpcUaClient *opcuaClient;
     QOpcUaNode *hmiLoginRequestNodeRW;
-    QOpcUaNode *usernameNodeR, *passwordNodeR;
+    QOpcUaNode *usernameNodeR, *passwordNodeR, *userLogoutNodeR;
     QOpcUaNode *authRightNodeW, *accessLevelNodeW, *displayUsernameNodeW;
     QOpcUaNode *jobIDNodeW, *jobNameNodeW, *materialCodeNodeW, *jobRecipeNameNodeW, *jobPlanQtyNodeW, *jobPlanStartTimeNodeW, *jobPlanEndTimeNodeW;
     QOpcUaNode *powerStatusNodeR, *visionStatusNodeR, *materialReadyNodeW;

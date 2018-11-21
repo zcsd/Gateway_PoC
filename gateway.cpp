@@ -123,7 +123,7 @@ void Gateway::getHMILoginAuth(QString username, QString password, QString servic
         const QJsonObject obj = doc.object();
 
         int authCode = obj.value(QLatin1String("result")).toInt();
-        QString displayUserName = obj.value(QLatin1String("displayName")).toString();
+        displayUserName = obj.value(QLatin1String("displayName")).toString();
         QString accessLevel = obj.value(QLatin1String("rights")).toObject().value(QLatin1String("mespoc")).toObject().value(QLatin1String("mespoc")).toObject().value(QLatin1String("User")).toString();
 
         qDebug() << "Get autho result from autho server:" << authCode << displayUserName << accessLevel;
@@ -383,6 +383,20 @@ void Gateway::opcuaConnected()
     jobApproveNodeW = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.job_approve");  // int16
 
     materialReadyNodeW = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.materialReady"); // uint16
+
+    userLogoutNodeR = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.userLogout"); // unit16
+    userLogoutNodeR->enableMonitoring(QOpcUa::NodeAttribute::Value, QOpcUaMonitoringParameters(100));
+    connect(userLogoutNodeR, &QOpcUaNode::attributeUpdated, this, [this](QOpcUa::NodeAttribute attr, const QVariant &value)
+    {
+        Q_UNUSED(attr);
+        qDebug() << "Read userLogout status node:" << value.toInt();
+
+        if (isMqttConnected && value.toInt() == 1)
+        {
+            QString toSent = QString("{'OperatorLogout': 1, 'UserName': '%1'}").arg(displayUserName);
+            mqttClient->publish("v1/devices/me/telemetry", toSent, 0);
+        }
+    });
 
     machineStepNodeR = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.machineStep"); // uint 16
     machineStepNodeR->enableMonitoring(QOpcUa::NodeAttribute::Value, QOpcUaMonitoringParameters(100));

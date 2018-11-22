@@ -384,6 +384,21 @@ void Gateway::opcuaConnected()
 
     materialReadyNodeW = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.materialReady"); // uint16
 
+    objectPresentNodeRW = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.objectPresent"); // uint 16
+    objectPresentNodeRW->enableMonitoring(QOpcUa::NodeAttribute::Value, QOpcUaMonitoringParameters(100));
+    connect(objectPresentNodeRW, &QOpcUaNode::attributeUpdated, this, [this](QOpcUa::NodeAttribute attr, const QVariant &value)
+    {
+        Q_UNUSED(attr);
+        qDebug() << "Read objectPresent status node:" << value.toInt();
+
+        if (isMqttConnected && value.toInt() == 1)
+        {
+            QString toSent = QString("{'JobID': %1, 'ObjectPresent': '1'}").arg(sJobID);
+            mqttClient->publish("v1/devices/me/telemetry", toSent, 0);
+            objectPresentNodeRW->writeAttribute(QOpcUa::NodeAttribute::Value, 0, QOpcUa::UInt16);
+        }
+    });
+
     userLogoutNodeR = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.userLogout"); // unit16
     userLogoutNodeR->enableMonitoring(QOpcUa::NodeAttribute::Value, QOpcUaMonitoringParameters(100));
     connect(userLogoutNodeR, &QOpcUaNode::attributeUpdated, this, [this](QOpcUa::NodeAttribute attr, const QVariant &value)

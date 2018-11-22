@@ -90,7 +90,7 @@ private:
     QOpcUaNode *visionResultR, *goodPartsCounterR, *rejectSizePartsCounterR, *rejectColorPartsCounterR, *totalPartsCounterR;
     QOpcUaNode *conveyorSpeedNodeW;
     QOpcUaNode *jobCompletedNodeR, *jobBusyStatusNodeR;
-    QOpcUaNode *machineReadyNodeR, *resultReadNodeRW, *machineStepNodeR;
+    QOpcUaNode *machineReadyNodeR, *resultReadNodeRW, *machineStepNodeR, *objectPresentNodeRW;
 
     bool isOpcUaConnected = false;
     bool authRightWritten = false, displayUsernameWritten = false, accessLevelWritten = false;

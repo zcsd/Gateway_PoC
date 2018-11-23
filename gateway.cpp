@@ -384,6 +384,10 @@ void Gateway::opcuaConnected()
 
     materialReadyNodeW = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.materialReady"); // uint16
 
+    jobModelNodeW = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.job.job_Model"); // string
+    jobLengthNodeW = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.job.job_Length"); // int 16
+    jobColorNodeW = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.job.job_Color"); // string
+
     objectPresentNodeRW = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.objectPresent"); // uint 16
     objectPresentNodeRW->enableMonitoring(QOpcUa::NodeAttribute::Value, QOpcUaMonitoringParameters(100));
     connect(objectPresentNodeRW, &QOpcUaNode::attributeUpdated, this, [this](QOpcUa::NodeAttribute attr, const QVariant &value)
@@ -822,6 +826,10 @@ void Gateway::receiveMqttSubMsg(QString topic, QString msg)
         QString jobPlanEndTime = obj.value(QLatin1String("params")).toObject().value(QLatin1String("planned_end_time")).toString();
         QString conveyorSpeed = obj.value(QLatin1String("params")).toObject().value(QLatin1String("conveyer_speed")).toString();
 
+        QString jobModel =obj.value(QLatin1String("params")).toObject().value(QLatin1String("model")).toString();
+        QString jobLength =obj.value(QLatin1String("params")).toObject().value(QLatin1String("length")).toString();
+        QString jobColor =obj.value(QLatin1String("params")).toObject().value(QLatin1String("color")).toString();
+
         ui->labelJobID->setText(jobID);
         ui->labelJobProcess->setText(jobName);
         ui->labelJobMaterial->setText(materialCode);
@@ -841,6 +849,9 @@ void Gateway::receiveMqttSubMsg(QString topic, QString msg)
         conveyorSpeedNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, conveyorSpeed.toInt(), QOpcUa::Int16);
 
         jobApproveNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, 8, QOpcUa::Int16); // Approve job request (8),reject(7)
+        jobModelNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, jobModel, QOpcUa::String);
+        jobColorNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, jobColor, QOpcUa::String);
+        jobLengthNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, jobLength.toInt(), QOpcUa::Int16);
 
         ui->labelRFIDRead->clear();
 

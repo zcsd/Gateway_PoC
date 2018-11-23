@@ -91,6 +91,7 @@ private:
     QOpcUaNode *conveyorSpeedNodeW;
     QOpcUaNode *jobCompletedNodeR, *jobBusyStatusNodeR;
     QOpcUaNode *machineReadyNodeR, *resultReadNodeRW, *machineStepNodeR, *objectPresentNodeRW;
+    QOpcUaNode *jobModelNodeW, *jobLengthNodeW, *jobColorNodeW;
 
     bool isOpcUaConnected = false;
     bool authRightWritten = false, displayUsernameWritten = false, accessLevelWritten = false;

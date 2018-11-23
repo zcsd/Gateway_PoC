@@ -851,7 +851,7 @@ void Gateway::receiveMqttSubMsg(QString topic, QString msg)
         jobApproveNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, 8, QOpcUa::Int16); // Approve job request (8),reject(7)
         jobModelNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, jobModel, QOpcUa::String);
         jobColorNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, jobColor, QOpcUa::String);
-        jobLengthNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, jobLength.toInt(), QOpcUa::Int16);
+        jobLengthNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, int(jobLength.toDouble()), QOpcUa::Int16);
 
         ui->labelRFIDRead->clear();
 

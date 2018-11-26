@@ -394,6 +394,7 @@ void Gateway::opcuaConnected()
     {
         Q_UNUSED(attr);
         qDebug() << "Read objectPresent status node:" << value.toInt();
+        ui->labelObjectPresent->setNum(value.toInt());
 
         if (isMqttConnected && value.toInt() == 1)
         {
@@ -414,7 +415,12 @@ void Gateway::opcuaConnected()
         {
             QString toSent = QString("{'OperatorLogout': 1, 'UserName': '%1'}").arg(displayUserName);
             mqttClient->publish("v1/devices/me/telemetry", toSent, 0);
-        }
+            ui->labelID->clear();
+            ui->labelAccessLevel->clear();
+            ui->labelApprove->clear();
+            ui->labelPassword->clear();
+            ui->labelName->clear();
+            ui->labelTimeLogin->clear();        }
     });
 
     machineStepNodeR = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.machineStep"); // uint 16
@@ -444,6 +450,7 @@ void Gateway::opcuaConnected()
         if (value.toInt() == 1)
         {
             sJobID = "NA";
+            ui->labelRFIDRead->clear();
             ui->labelJobID->clear();
             ui->labelJobProcess->clear();
             ui->labelJobMaterial->clear();
@@ -483,6 +490,8 @@ void Gateway::opcuaConnected()
     {
         Q_UNUSED(attr);
         qDebug() << "Read machineReady node:" << value.toInt();
+        ui->labelMachineReady->setNum(value.toInt());
+
         ui->listWidget->addItem("[Info]    " + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss    ")
                                           + "Machine Ready(for vision result writing) in OPCUA server updated: " + QString::number(value.toInt()));
     });
@@ -493,6 +502,8 @@ void Gateway::opcuaConnected()
     {
         Q_UNUSED(attr);
         qDebug() << "Read resultRead node:" << value.toInt();
+        ui->labelResultRead->setNum(value.toInt());
+
         ui->listWidget->addItem("[Info]    " + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss    ")
                                           + "Result Read Status in OPCUA server updated: " + QString::number(value.toInt()));
         if (value.toInt() == 1)
@@ -690,6 +701,9 @@ void Gateway::opcuaDisconnected()
     ui->labelJobColorRejCounter->clear();
     ui->labelJobSizeRejCounter->clear();
     ui->labelJobTime->clear();
+    ui->labelMachineReady->clear();
+    ui->labelResultRead->clear();
+    ui->labelObjectPresent->clear();
 }
 
 void Gateway::opcuaError(QOpcUaClient::ClientError error)
@@ -838,6 +852,9 @@ void Gateway::receiveMqttSubMsg(QString topic, QString msg)
         ui->labelJobStartTime->setText(QDateTime::fromMSecsSinceEpoch(jobPlanStartTime.toLongLong()).toString("yyyy-MM-dd hh:mm:ss"));
         ui->labelJobEndTime->setText(QDateTime::fromMSecsSinceEpoch(jobPlanEndTime.toLongLong()).toString("yyyy-MM-dd hh:mm:ss"));
         ui->labelJobConSpeed->setText(conveyorSpeed);
+        ui->labelJobModel->setText(jobModel);
+        ui->labelJobSize->setText(jobLength);
+        ui->labelJobColor->setText(jobColor);
 
         jobIDNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, jobID, QOpcUa::String);
         jobNameNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, jobName, QOpcUa::String);
@@ -927,6 +944,9 @@ void Gateway::on_pushButtonStart_clicked()
         ui->labelJobColorRejCounter->clear();
         ui->labelJobSizeRejCounter->clear();
         ui->labelJobTime->clear();
+        ui->labelMachineReady->clear();
+        ui->labelResultRead->clear();
+        ui->labelObjectPresent->clear();
         connectToOPCUAServer();
     }
 
@@ -940,6 +960,9 @@ void Gateway::on_pushButtonStart_clicked()
         ui->labelJobStartTime->clear();
         ui->labelJobEndTime->clear();
         ui->labelJobConSpeed->clear();
+        ui->labelJobModel->clear();
+        ui->labelJobSize->clear();
+        ui->labelJobColor->clear();
         connectMqtt();
     }
 
@@ -993,4 +1016,10 @@ void Gateway::on_pushButtonStop_clicked()
     ui->labelJobColorRejCounter->clear();
     ui->labelJobSizeRejCounter->clear();
     ui->labelJobTime->clear();
+    ui->labelJobModel->clear();
+    ui->labelJobSize->clear();
+    ui->labelJobColor->clear();
+    ui->labelMachineReady->clear();
+    ui->labelResultRead->clear();
+    ui->labelObjectPresent->clear();
 }

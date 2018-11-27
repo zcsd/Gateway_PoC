@@ -526,10 +526,10 @@ void Gateway::opcuaConnected()
         qDebug() << "Read visionResult node:" << value.toInt();
         ui->listWidget->addItem("[Info]    " + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss    ")
                                           + "Vision Result in OPCUA server updated: " + QString::number(value.toInt()));
-        ui->labelJobVisionResult->setNum(value.toInt());
-        ui->labelJobTime->setText(QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss"));
         if ( isJobStart && (value.toInt() != 0) )
         {
+            ui->labelJobVisionResult->setNum(value.toInt());
+            ui->labelJobTime->setText(QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss"));
             QString toSent = QString("{'JobID': %1, 'VisionResult': %2}").arg(sJobID, QString::number(value.toInt()));
             mqttClient->publish("v1/devices/me/telemetry", toSent, 0);
             isResultPublished = true;

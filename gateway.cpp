@@ -546,7 +546,12 @@ void Gateway::opcuaConnected()
         ui->listWidget->addItem("[Info]    " + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss    ")
                                           + "Good parts counter in OPCUA server updated: " + QString::number(value.toInt()));
         ui->labelJobGoodCounter->setNum(value.toInt());
-        if (isJobStart && (value.toInt() != 0) )
+        if (value.toInt() == 0)
+        {
+            sJobID = "NA";
+        }
+
+        if (isJobStart)
         {
             QString toSent = QString("{'JobID': %1, 'GoodPartsCounter': %2}").arg(sJobID, QString::number(value.toInt()));
             mqttClient->publish("v1/devices/me/telemetry", toSent, 0);
@@ -562,7 +567,11 @@ void Gateway::opcuaConnected()
         ui->listWidget->addItem("[Info]    " + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss    ")
                                           + "Reject-size parts counter in OPCUA server updated: " + QString::number(value.toInt()));
         ui->labelJobSizeRejCounter->setNum(value.toInt());
-        if (isJobStart && (value.toInt() != 0) )
+        if (value.toInt() == 0)
+        {
+            sJobID = "NA";
+        }
+        if (isJobStart)
         {
             QString toSent = QString("{'JobID': %1, 'RejectSizePartsCounter': %2}").arg(sJobID, QString::number(value.toInt()));
             mqttClient->publish("v1/devices/me/telemetry", toSent, 0);
@@ -578,7 +587,11 @@ void Gateway::opcuaConnected()
         ui->listWidget->addItem("[Info]    " + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss    ")
                                           + "Reject-color parts counter in OPCUA server updated: " + QString::number(value.toInt()));
         ui->labelJobColorRejCounter->setNum(value.toInt());
-        if (isJobStart && (value.toInt() != 0) )
+        if (value.toInt() == 0)
+        {
+            sJobID = "NA";
+        }
+        if (isJobStart)
         {
             QString toSent = QString("{'JobID': %1, 'RejectColorPartsCounter': %2}").arg(sJobID, QString::number(value.toInt()));
             mqttClient->publish("v1/devices/me/telemetry", toSent, 0);
@@ -594,7 +607,11 @@ void Gateway::opcuaConnected()
         ui->listWidget->addItem("[Info]    " + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss    ")
                                           + "Total parts counter in OPCUA server updated: " + QString::number(value.toInt()));
         ui->labelJobTotalCounter->setNum(value.toInt());
-        if (isJobStart && (value.toInt() != 0) )
+        if (value.toInt() == 0)
+        {
+            sJobID = "NA";
+        }
+        if (isJobStart)
         {
             QString toSent = QString("{'JobID': %1, 'TotalPartsCounter': %2}").arg(sJobID, QString::number(value.toInt()));
             mqttClient->publish("v1/devices/me/telemetry", toSent, 0);

@@ -101,6 +101,7 @@ private:
 
     QString cardID, sJobID = "NA";
     bool isJobRequest = false, isVisionReady = false, isPowerReady = false, isMaterialReady = false;
+    int cntInObjPresent = 0;
 
     void initSetup();
     void connectToOPCUAServer();

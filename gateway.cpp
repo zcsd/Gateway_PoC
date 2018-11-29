@@ -398,7 +398,7 @@ void Gateway::opcuaConnected()
 
         if (isMqttConnected && value.toInt() == 1)
         {
-            QString toSent = QString("{'JobID': %1, 'ObjectPresent': '1'}").arg(sJobID);
+            QString toSent = QString("{'JobID': %1, 'ObjectPresent': '1', 'PresentCounter': %2}").arg(sJobID, QString::number(cntInObjPresent+1));
             mqttClient->publish("v1/devices/me/telemetry", toSent, 0);
             objectPresentNodeRW->writeAttribute(QOpcUa::NodeAttribute::Value, 0, QOpcUa::UInt16);
         }
@@ -432,7 +432,7 @@ void Gateway::opcuaConnected()
         ui->labelMachineStep->setNum(value.toInt());
         if (isMqttConnected)
         {
-            QString toSent = QString("{'JobID': %1,'MachineStep': %2}").arg(sJobID, QString::number(value.toInt()));
+            QString toSent = QString("{'JobID': %1,'MachineStep': %2, 'PresentCounter': %3}").arg(sJobID, QString::number(value.toInt()), QString::number(cntInObjPresent+1));
             mqttClient->publish("v1/devices/me/telemetry", toSent, 0);
         }
     });
@@ -607,6 +607,7 @@ void Gateway::opcuaConnected()
         ui->listWidget->addItem("[Info]    " + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss    ")
                                           + "Total parts counter in OPCUA server updated: " + QString::number(value.toInt()));
         ui->labelJobTotalCounter->setNum(value.toInt());
+        cntInObjPresent = value.toInt();
         if (value.toInt() == 0)
         {
             sJobID = "NA";

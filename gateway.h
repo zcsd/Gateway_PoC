@@ -92,6 +92,7 @@ private:
     QOpcUaNode *jobCompletedNodeR, *jobBusyStatusNodeR;
     QOpcUaNode *machineReadyNodeR, *resultReadNodeRW, *machineStepNodeR, *objectPresentNodeRW;
     QOpcUaNode *jobModelNodeW, *jobLengthNodeW, *jobColorNodeW;
+    QOpcUaNode *powerNodeR, *energyNodeR, *actualTempNodeW, *actualVibrationNodeW;
 
     bool isOpcUaConnected = false;
     bool authRightWritten = false, displayUsernameWritten = false, accessLevelWritten = false;

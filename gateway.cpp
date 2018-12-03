@@ -388,6 +388,9 @@ void Gateway::opcuaConnected()
     jobLengthNodeW = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.job.job_Length"); // int 16
     jobColorNodeW = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.job.job_Color"); // string
 
+    //actualTempNodeW = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.actual_temperature"); // float
+    //actualVibrationNodeW = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.actual_vibration"); // float
+
     objectPresentNodeRW = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.objectPresent"); // uint 16
     objectPresentNodeRW->enableMonitoring(QOpcUa::NodeAttribute::Value, QOpcUaMonitoringParameters(100));
     connect(objectPresentNodeRW, &QOpcUaNode::attributeUpdated, this, [this](QOpcUa::NodeAttribute attr, const QVariant &value)
@@ -615,6 +618,34 @@ void Gateway::opcuaConnected()
         if (isJobStart)
         {
             QString toSent = QString("{'JobID': %1, 'TotalPartsCounter': %2}").arg(sJobID, QString::number(value.toInt()));
+            mqttClient->publish("v1/devices/me/telemetry", toSent, 0);
+        }
+    });
+
+    powerNodeR = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_PowerMeter1.power"); // float
+    powerNodeR->enableMonitoring(QOpcUa::NodeAttribute::Value, QOpcUaMonitoringParameters(100));
+    connect(powerNodeR, &QOpcUaNode::attributeUpdated, this, [this](QOpcUa::NodeAttribute attr, const QVariant &value)
+    {
+        Q_UNUSED(attr);
+        qDebug() << "Read power(power meter) node:" << value.toDouble();
+
+        if (isMqttConnected)
+        {
+            QString toSent = QString("{'PowerConsumed': '%1'}").arg(QString::number(value.toDouble()));
+            mqttClient->publish("v1/devices/me/telemetry", toSent, 0);
+        }
+    });
+
+    energyNodeR = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_PowerMeter1.energy"); // float
+    energyNodeR->enableMonitoring(QOpcUa::NodeAttribute::Value, QOpcUaMonitoringParameters(100));
+    connect(energyNodeR, &QOpcUaNode::attributeUpdated, this, [this](QOpcUa::NodeAttribute attr, const QVariant &value)
+    {
+        Q_UNUSED(attr);
+        qDebug() << "Read energy(power meter) node:" << value.toDouble();
+
+        if (isMqttConnected)
+        {
+            QString toSent = QString("{'EnergyConsumed': '%1'}").arg(QString::number(value.toDouble()));
             mqttClient->publish("v1/devices/me/telemetry", toSent, 0);
         }
     });
@@ -848,50 +879,66 @@ void Gateway::receiveMqttSubMsg(QString topic, QString msg)
         const QJsonDocument doc = QJsonDocument::fromJson(msg.replace("[","").replace("]","").toUtf8());
         const QJsonObject obj = doc.object();
 
-        QString jobID = obj.value(QLatin1String("params")).toObject().value(QLatin1String("job_id")).toString();
-        sJobID = jobID;
-        QString jobName = obj.value(QLatin1String("params")).toObject().value(QLatin1String("job")).toString();
-        QString materialCode = obj.value(QLatin1String("params")).toObject().value(QLatin1String("material_code")).toString();
-        QString jobRecipeName = obj.value(QLatin1String("params")).toObject().value(QLatin1String("recipe_name")).toString();
-        QString jobPlanQty = obj.value(QLatin1String("params")).toObject().value(QLatin1String("quantity")).toString();
-        QString jobPlanStartTime = obj.value(QLatin1String("params")).toObject().value(QLatin1String("planned_start_time")).toString();
-        QString jobPlanEndTime = obj.value(QLatin1String("params")).toObject().value(QLatin1String("planned_end_time")).toString();
-        QString conveyorSpeed = obj.value(QLatin1String("params")).toObject().value(QLatin1String("conveyer_speed")).toString();
+        if (obj.value(QLatin1String("method")).toString() == "jobInfo")
+        {
+            QString jobID = obj.value(QLatin1String("params")).toObject().value(QLatin1String("job_id")).toString();
+            sJobID = jobID;
+            QString jobName = obj.value(QLatin1String("params")).toObject().value(QLatin1String("job")).toString();
+            QString materialCode = obj.value(QLatin1String("params")).toObject().value(QLatin1String("material_code")).toString();
+            QString jobRecipeName = obj.value(QLatin1String("params")).toObject().value(QLatin1String("recipe_name")).toString();
+            QString jobPlanQty = obj.value(QLatin1String("params")).toObject().value(QLatin1String("quantity")).toString();
+            QString jobPlanStartTime = obj.value(QLatin1String("params")).toObject().value(QLatin1String("planned_start_time")).toString();
+            QString jobPlanEndTime = obj.value(QLatin1String("params")).toObject().value(QLatin1String("planned_end_time")).toString();
+            QString conveyorSpeed = obj.value(QLatin1String("params")).toObject().value(QLatin1String("conveyer_speed")).toString();
 
-        QString jobModel =obj.value(QLatin1String("params")).toObject().value(QLatin1String("model")).toString();
-        QString jobLength =obj.value(QLatin1String("params")).toObject().value(QLatin1String("length")).toString();
-        QString jobColor =obj.value(QLatin1String("params")).toObject().value(QLatin1String("color")).toString();
+            QString jobModel =obj.value(QLatin1String("params")).toObject().value(QLatin1String("model")).toString();
+            QString jobLength =obj.value(QLatin1String("params")).toObject().value(QLatin1String("length")).toString();
+            QString jobColor =obj.value(QLatin1String("params")).toObject().value(QLatin1String("color")).toString();
 
-        ui->labelJobID->setText(jobID);
-        ui->labelJobProcess->setText(jobName);
-        ui->labelJobMaterial->setText(materialCode);
-        ui->labelJobRecipe->setText(jobRecipeName);
-        ui->labelJobQuantity->setText(jobPlanQty);
-        ui->labelJobStartTime->setText(QDateTime::fromMSecsSinceEpoch(jobPlanStartTime.toLongLong()).toString("yyyy-MM-dd hh:mm:ss"));
-        ui->labelJobEndTime->setText(QDateTime::fromMSecsSinceEpoch(jobPlanEndTime.toLongLong()).toString("yyyy-MM-dd hh:mm:ss"));
-        ui->labelJobConSpeed->setText(conveyorSpeed);
-        ui->labelJobModel->setText(jobModel);
-        ui->labelJobSize->setText(jobLength);
-        ui->labelJobColor->setText(jobColor);
+            ////fsdfsdgfdghsdfhfsdgh!!!!!!!
+            QString tempThreshold = obj.value(QLatin1String("params")).toObject().value(QLatin1String("temp_threshold")).toString();
+            QString vibrThreshold = obj.value(QLatin1String("params")).toObject().value(QLatin1String("vibr_threshold")).toString();
 
-        jobIDNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, jobID, QOpcUa::String);
-        jobNameNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, jobName, QOpcUa::String);
-        materialCodeNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, materialCode, QOpcUa::String);
-        jobRecipeNameNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, jobRecipeName, QOpcUa::String);
-        jobPlanQtyNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, jobPlanQty.toInt(), QOpcUa::Int32);
-        jobPlanStartTimeNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, QDateTime::fromMSecsSinceEpoch(jobPlanStartTime.toLongLong()).toString("yyyy-MM-dd hh:mm:ss"), QOpcUa::String);
-        jobPlanEndTimeNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, QDateTime::fromMSecsSinceEpoch(jobPlanEndTime.toLongLong()).toString("yyyy-MM-dd hh:mm:ss"), QOpcUa::String);
-        conveyorSpeedNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, conveyorSpeed.toInt(), QOpcUa::Int16);
+            ui->labelJobID->setText(jobID);
+            ui->labelJobProcess->setText(jobName);
+            ui->labelJobMaterial->setText(materialCode);
+            ui->labelJobRecipe->setText(jobRecipeName);
+            ui->labelJobQuantity->setText(jobPlanQty);
+            ui->labelJobStartTime->setText(QDateTime::fromMSecsSinceEpoch(jobPlanStartTime.toLongLong()).toString("yyyy-MM-dd hh:mm:ss"));
+            ui->labelJobEndTime->setText(QDateTime::fromMSecsSinceEpoch(jobPlanEndTime.toLongLong()).toString("yyyy-MM-dd hh:mm:ss"));
+            ui->labelJobConSpeed->setText(conveyorSpeed);
+            ui->labelJobModel->setText(jobModel);
+            ui->labelJobSize->setText(jobLength);
+            ui->labelJobColor->setText(jobColor);
 
-        jobApproveNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, 8, QOpcUa::Int16); // Approve job request (8),reject(7)
-        jobModelNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, jobModel, QOpcUa::String);
-        jobColorNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, jobColor, QOpcUa::String);
-        jobLengthNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, int(jobLength.toDouble()), QOpcUa::Int16);
+            jobIDNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, jobID, QOpcUa::String);
+            jobNameNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, jobName, QOpcUa::String);
+            materialCodeNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, materialCode, QOpcUa::String);
+            jobRecipeNameNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, jobRecipeName, QOpcUa::String);
+            jobPlanQtyNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, jobPlanQty.toInt(), QOpcUa::Int32);
+            jobPlanStartTimeNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, QDateTime::fromMSecsSinceEpoch(jobPlanStartTime.toLongLong()).toString("yyyy-MM-dd hh:mm:ss"), QOpcUa::String);
+            jobPlanEndTimeNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, QDateTime::fromMSecsSinceEpoch(jobPlanEndTime.toLongLong()).toString("yyyy-MM-dd hh:mm:ss"), QOpcUa::String);
+            conveyorSpeedNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, conveyorSpeed.toInt(), QOpcUa::Int16);
 
-        ui->labelRFIDRead->clear();
+            jobApproveNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, 8, QOpcUa::Int16); // Approve job request (8),reject(7)
+            jobModelNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, jobModel, QOpcUa::String);
+            jobColorNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, jobColor, QOpcUa::String);
+            jobLengthNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, int(jobLength.toDouble()), QOpcUa::Int16);
 
-        ui->listWidget->addItem("[Info]    " + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss    ")
-                                          + "Write job information to OPCUA server");
+            ui->labelRFIDRead->clear();
+
+            ui->listWidget->addItem("[Info]    " + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss    ")
+                                              + "Write job information to OPCUA server");
+        }
+        else if (obj.value(QLatin1String("method")).toString() == "tempCheck")
+        {
+            //double currentTemp = obj.value(QLatin1String("params")).toObject().value(QLatin1String("TEMP")).toDouble();
+
+        }
+        else if (obj.value(QLatin1String("method")).toString() == "vibrationCheck")
+        {
+
+        }
     }
     else
     {

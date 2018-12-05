@@ -388,8 +388,7 @@ void Gateway::opcuaConnected()
     jobLengthNodeW = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.job.job_Length"); // int 16
     jobColorNodeW = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.job.job_Color"); // string
 
-    //actualTempNodeW = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.actual_temperature"); // float
-    //actualVibrationNodeW = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.actual_vibration"); // float
+    alarmEventNodeW = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.alert"); //uint16
 
     objectPresentNodeRW = opcuaClient->node("ns=2;s=|var|CPS-PCS341MB-DS1.Application.GVL.OPC_Machine_A0001.objectPresent"); // uint 16
     objectPresentNodeRW->enableMonitoring(QOpcUa::NodeAttribute::Value, QOpcUaMonitoringParameters(100));
@@ -631,7 +630,7 @@ void Gateway::opcuaConnected()
 
         if (isMqttConnected)
         {
-            QString toSent = QString("{'PowerConsumed': '%1'}").arg(QString::number(value.toDouble()));
+            QString toSent = QString("{'PowerConsumed': %1}").arg(QString::number(value.toDouble()));
             mqttClient->publish("v1/devices/me/telemetry", toSent, 0);
         }
     });
@@ -645,7 +644,7 @@ void Gateway::opcuaConnected()
 
         if (isMqttConnected)
         {
-            QString toSent = QString("{'EnergyConsumed': '%1'}").arg(QString::number(value.toDouble()));
+            QString toSent = QString("{'EnergyConsumed': %1}").arg(QString::number(value.toDouble()));
             mqttClient->publish("v1/devices/me/telemetry", toSent, 0);
         }
     });
@@ -895,10 +894,6 @@ void Gateway::receiveMqttSubMsg(QString topic, QString msg)
             QString jobLength =obj.value(QLatin1String("params")).toObject().value(QLatin1String("length")).toString();
             QString jobColor =obj.value(QLatin1String("params")).toObject().value(QLatin1String("color")).toString();
 
-            ////fsdfsdgfdghsdfhfsdgh!!!!!!!
-            QString tempThreshold = obj.value(QLatin1String("params")).toObject().value(QLatin1String("temp_threshold")).toString();
-            QString vibrThreshold = obj.value(QLatin1String("params")).toObject().value(QLatin1String("vibr_threshold")).toString();
-
             ui->labelJobID->setText(jobID);
             ui->labelJobProcess->setText(jobName);
             ui->labelJobMaterial->setText(materialCode);
@@ -930,19 +925,18 @@ void Gateway::receiveMqttSubMsg(QString topic, QString msg)
             ui->listWidget->addItem("[Info]    " + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss    ")
                                               + "Write job information to OPCUA server");
         }
-        else if (obj.value(QLatin1String("method")).toString() == "tempCheck")
+        else if (obj.value(QLatin1String("method")).toString() == "Alarm")
         {
-            //double currentTemp = obj.value(QLatin1String("params")).toObject().value(QLatin1String("TEMP")).toDouble();
-
+            QString alarmEvent =obj.value(QLatin1String("params")).toObject().value(QLatin1String("event")).toString();
+            if (alarmEvent.contains("Temp", Qt::CaseSensitive))
+            {
+                alarmEventNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, 1, QOpcUa::UInt16);
+            }
+            else if (alarmEvent.contains("Vibration", Qt::CaseSensitive))
+            {
+                alarmEventNodeW->writeAttribute(QOpcUa::NodeAttribute::Value, 2, QOpcUa::UInt16);
+            }
         }
-        else if (obj.value(QLatin1String("method")).toString() == "vibrationCheck")
-        {
-
-        }
-    }
-    else
-    {
-
     }
 
 }

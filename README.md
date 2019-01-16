@@ -1,11 +1,12 @@
 # **Gateway**
 
-using OPCUA and http REST api
+using OPCUA and REST api
 
 ## **Installation**
+- similar with Pylon_CV
 
 **Requirements**
 - Ubuntu(16.04+)
-- Qt 5.12 (LTS)
+- Qt 5.12.0 (LTS)
 
-*Oct 25 2018*
+*Jan 15 2019*

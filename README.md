@@ -1,9 +1,6 @@
 # **Gateway**
 
-using OPCUA and REST api
-
-## **Installation**
-- similar with Pylon_CV
+using OPCUA，MQTT and REST api
 
 **Requirements**
 - Ubuntu(16.04+)
